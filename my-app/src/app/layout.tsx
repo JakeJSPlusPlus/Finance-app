@@ -1,3 +1,4 @@
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -26,14 +27,14 @@ export default function Layout({children}: Readonly<{children: ReactNode;
     return (
         <html lang="en">
         <body>
-        <div className={`flex flex-col h-lvh w-lvw ${geistSans.variable} ${geistMono.variable} antialiased`}>
-            <div className={"flex h-13 w-full bg-gray-400 justify-start items-center pl-1"}>
+        <div className={`block  ${geistSans.variable} ${geistMono.variable} antialiased`}>
+            <div className={"flex h-full w-full bg-gray-400 justify-start items-center pl-1"}>
                 <FiGrid className={"flex w-12"} size={30}/>
                 <h2 className={"ml-2 flex items-center text-3xl font-semibold"}>AutoPay</h2>
             </div>
             <div className={"inline-block w-full h-full bg-white items-center flex-row"}>
                 <div className={"flex w-full h-full "}>
-                    <div className={"flex h-full w-14 bg-gray-400 items-center gap-y-6 pt-10 flex-col"}>
+                    <div className={"flex w-14 bg-gray-400 items-center gap-y-6 pt-10 flex-col"}>
                         <FiTable size={30} />
                         <FiPieChart size={30} />
                         <FiInfo size={30} />
@@ -43,7 +44,6 @@ export default function Layout({children}: Readonly<{children: ReactNode;
                     {children}
                 </div>
             </div>
-
         </div>
         </body>
         </html>

@@ -3,6 +3,10 @@
 import {Fragment, useEffect, useEffectEvent, useState} from "react";
 import {getSupabaseBrowserClient} from "@/lib/supabase/client";
 import {getSupabaseApiClient} from "@/lib/supabase/api";
+import gql from "graphql-tag";
+import {TypedDocumentNode} from "@graphql-typed-document-node/core";
+import {useQuery} from "@apollo/client/react";
+
 
 /*const PayItems = [
     {id: 1, name: "PNC", amount: 1600, frequency: 14},
@@ -11,73 +15,75 @@ import {getSupabaseApiClient} from "@/lib/supabase/api";
 ]*/
 
 
+export interface BillsQueryData {
+    billsCollection: {
+        edges: {
+            node: {
+                id: string;
+                name: string;
+                amount: string;
+                frequency: {
+                    name: string;
+                };
+            };
+        }[];
+    };
+}
+
+// No variables for this query
+export type BillsQueryVariables = Record<string, never>;
+
+// ---- Typed Query ----
+
+export const BILLS_QUERY: TypedDocumentNode<
+    BillsQueryData,
+    BillsQueryVariables
+> = gql`
+  query bills {
+    billsCollection(first: 32) {
+      edges {
+        node {
+          id
+          name
+          amount
+          frequency {
+            name
+          }
+        }
+      }
+    }
+  }
+`;
 
 export function SpreadSheetGrid() {
-    //const supabase = getSupabaseBrowserClient();
-    const supabaseApiClient = getSupabaseApiClient()
+    const {loading, error, data} = useQuery(BILLS_QUERY);
     const [payItems, setPayItems] = useState<object[] | never>([]);
-    /*const signIn = async () => {
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email: "jkspivells42015@gmail.com",
-            password: "bullet@TDF27"
-        })
-        if (error) {
-            console.log(error)
-        }
-        return data
-    }*/
 
-        const setItems = useEffectEvent((
-            data: object[]) => {
-            setPayItems(data)
-        })
-        useEffect(() => {
-            const getBills = async () => {
-                /*const {data, error} = await supabase.from("bills").select("*")
-                const
-                if (error) {
-                    console.log(error)
-                    throw error
-                }
-                console.log(data)
-                setItems(data)
-            }*/
-                if(supabaseApiClient === null){
-                    throw Error("No supabaseApiClient returned");
-                }
-                let {data: bills, error} = await supabaseApiClient
-                    .from('bills')
-                    .select('*')
-                if (error) {
-                    console.log(error)
-                    throw error
-                }
-                if (!bills) {
-                    throw error
-                }
-
-                setItems(bills)
-            }
-            getBills();
-
-        }, [])
-
-        return (
-            <div className={"grid grid-cols-4 text-black"}>
-                <div className={"flex border-r align-middle justify-center"}>ID</div>
-                <div className={"flex border-r align-middle justify-center"}>Name</div>
-                <div className={"flex border-r align-middle justify-center"}>Amount</div>
-                <div className={"flex border-r align-middle justify-center"}>Freq</div>
-                {payItems.map((item: any, index: number) => (
-                    <Fragment key={index}>
-                        <div className={"flex border-r align-middle justify-center border-t p-1"}>{item.id}</div>
-                        <div className={"flex border-r align-middle justify-center border-t p-1"}>{item.name}</div>
-                        <div className={"flex border-r align-middle justify-center border-t p-1"}>{item.amount}</div>
-                        <div className={"flex border-r align-middle justify-center border-t p-1"}>{item.frequency}</div>
-                    </Fragment>
-                ))}
-            </div>
-        )
+    if (loading) return "...loading";
+    if (error){
+        console.log(error)
+        return null;}
+    if (!data){
+        console.log("no data")
+        return null;
     }
+
+    return (
+        <div className={"grid grid-cols-4 text-black"}>
+            <div className={"flex border-r align-middle justify-center"}>ID</div>
+            <div className={"flex border-r align-middle justify-center"}>Name</div>
+            <div className={"flex border-r align-middle justify-center"}>Amount</div>
+            <div className={"flex border-r align-middle justify-center"}>Freq</div>
+            {data?.billsCollection.edges.map(({node}, index) => (
+                <Fragment key={index}>
+                    <div className={"flex border-r align-middle justify-center border-t p-1"}>{node.id}</div>
+                    <div className={"flex border-r align-middle justify-center border-t p-1"}>{node.name}</div>
+                    <div className={"flex border-r align-middle justify-center border-t p-1"}>{node.amount}</div>
+                    <div className={"flex border-r align-middle justify-center border-t p-1"}>{node.frequency.name}</div>
+                </Fragment>
+            ))}
+        </div>
+    )
+}
 
 

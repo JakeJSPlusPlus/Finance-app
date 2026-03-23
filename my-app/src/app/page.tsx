@@ -3,11 +3,15 @@ import {Fragment, useState} from "react";
 import {AddBillModal} from "@/components/AddBillModal";
 import {FiPlus} from "react-icons/fi";
 import {SpreadSheetGrid} from "@/app/components/SpreadSheetGrid";
+import {ApolloProvider} from "@apollo/client/react";
+import apolloClient from "@/lib/apollo/apollo-client";
 
 export default function page() {
     const [modalVisible, setModalVisible] = useState(false);
     return (
+        <ApolloProvider client={apolloClient}>
         <div className={"flex w-full h- flex-col"}>
+
             <div
                 className={"absolute object-center w-full h-full backdrop-blur-sm justify-center items-center bg-[#00000030]"}
                 hidden={!modalVisible}>
@@ -26,6 +30,8 @@ export default function page() {
             </div>
             <SpreadSheetGrid />
             <div className={"border-t border-black"}></div>
+
         </div>
+        </ApolloProvider>
     )
 }
