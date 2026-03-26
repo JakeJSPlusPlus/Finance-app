@@ -1,4 +1,4 @@
-"use client"
+    "use client"
 import apolloClient from "@/lib/apollo/apollo-client";
 import {useState, useEffect} from "react";
 import {TypedDocumentNode} from "@graphql-typed-document-node/core";
