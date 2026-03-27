@@ -1,8 +1,8 @@
 "use client"
-import {useMemo} from "react"
+import {useCallback, useMemo} from "react"
 import type {Bill, BillOverride} from "@/lib/types/bills";
 
-type NormalizedBill = {
+export type NormalizedBill = {
     id: string
     name: string
     originalAmount: number
@@ -47,8 +47,6 @@ export function useBillsDerivedState(
         const now = new Date(2026, 2, 24, 0, 0, 0, 0)
         const cutOff = new Date(now.valueOf() + (dateFilters * DAYS_DELTA_TO_MILLISECONDS))
 
-        console.log(cutOff)
-
         return normalized.filter((b) => {
             return  b.dueDate >= now && b.dueDate <= cutOff;
         })
@@ -62,17 +60,20 @@ export function useBillsDerivedState(
         () => filtered.reduce((sum, b) => sum + b.originalAmount, 0),
         [filtered, overrideAmount]
     )
+    const sortByDate = useCallback(() => filtered.sort((a,b) => a.dueDate.valueOf() - b.dueDate.valueOf()), [filtered])
+    const sortByAmount = useCallback(() => filtered.sort((a,b) => a.dueDate.valueOf() - b.dueDate.valueOf()), [filtered])
 
     const whatIfDelta = useMemo(
         () => totalDue - totalOriginal,
         [totalDue, totalOriginal]
     )
-
     return {
         normalized,       // full dataset, normalized — for "all bills" views
         filtered,         // current window + category slice
         totalDue,         // sum using effective (possibly overridden) amounts
         totalOriginal,    // sum using DB amounts only
-        whatIfDelta,      // difference so user knows how far they've deviated
+        whatIfDelta,
+        sortByDate,
+        sortByAmount,
     };
 }

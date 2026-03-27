@@ -11,6 +11,7 @@ import gql from "graphql-tag";
 import type {BillsQueryData, Bill} from "@/lib/types/bills"
 import {Loading} from "@/components/Loading"
 import {gqlBillToNormalized} from "@/lib/gqlBillToNormalized";
+    import {CloseWindowButton} from "@/components/CloseWindowButton";
 // No variables for this query
 export type BillsQueryVariables = Record<string, never>;
 
@@ -76,10 +77,7 @@ export function MainPageBase({children}: Readonly<{children: ReactNode;
                     <h2 className={"ml-2 flex items-center text-3xl text-black"}>{"My Finances Table View"}</h2>
                 </div>
                 <div className={"flex h-10 w-full border-b border-black items-center justify-start "}>
-                    <button onClick={() => setModalVisible(true)}
-                            className={"flex w-30 h-7 bg-fuchsia-950 justify-center items-center mx-2 hover:ring-2 hover:bg-fuchsia-800 "}>
-                        <FiPlus size={23}/> Add Pay
-                    </button>
+                    <CloseWindowButton onClickAction={() => setModalVisible(true)} />
                 </div>
                 <BillsDashboard bills={payItems} />
                 <div className={"border-t border-black"} ></div>

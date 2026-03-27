@@ -1,58 +1,45 @@
 // app/bills/BillsDashboard.tsx
 "use client";
-import { useState, useCallback } from "react";
-import type { Bill, BillOverride} from "@/lib/types/bills";
-import { useBillsDerivedState } from "@/hooks/useBillsDerivedState";
+import {useState, useMemo, useEffect} from "react";
+import type {Bill, BillOverride, BillsQueryData} from "@/lib/types/bills";
+import {NormalizedBill, useBillsDerivedState} from "@/hooks/useBillsDerivedState";
 import {dateLongToStandard} from "@/lib/dateLongToStandard";
+import {TypedDocumentNode} from "@graphql-typed-document-node/core";
+import gql from "graphql-tag";
+import {BillsQueryVariables} from "@/components/MainPageBase";
+import {BILLS_QUERY} from "@/lib/graphql/queries";
+import {SummaryCard} from "@/components/SummaryCard";
+import {DaysFilter} from "@/components/DaysFilter";
+import {formatCurrency} from "@/lib/formatCurrency";
+import {BillTableBody} from "@/components/BillTableBody";
+import {forEach} from "eslint-config-next";
+import {FiArrowUpRight} from "react-icons/fi";
+
 
 type Props = { bills: Bill[] };
-
+type NumberRecord = Record<string, number>;
 const DAYS_DELTA_TO_MILLISECONDS = 1000 * 60 *60 * 24;
 
 export default function BillsDashboard({ bills }: Props) {
-    // --- SOURCE STATE (never mutated) ---
-    // bills prop is your immutable DB values
+    const [timeRange, setTimeRange] = useState<number>(14); //set to 14 to simulate a common biweekly pay period
+    const [overrides, setOverrides] = useState({});
+    const [isSortDate, setIsSortDate] = useState<boolean>(true); //false is sorted by amount
+    const {normalized, filtered, totalDue, totalOriginal, sortByAmount, sortByDate} = useBillsDerivedState(bills, overrides, timeRange)
 
-    // --- OVERRIDE STATE (what-if adjustments, client only) ---
-    const [overrideAmount, setOverrideAmount] = useState<Record<string, number>>({});
-
-    // --- FILTER STATE ---
-    const [timeRange, setTimeRange] = useState<number>(14); //set to 14to simulate a common biweekly pay period
-    const {
-        filtered,
-        totalDue,
-        totalOriginal,
-        whatIfDelta,
-    } = useBillsDerivedState(bills, overrideAmount, timeRange);
-
-    const handleOverride = useCallback((id: string, rawValue: number) => {
-            // Remove override entirely if input is cleared — snaps back to DB value
-            setOverrideAmount((prev) => {
-                const next = {...prev};
-                delete next[id];
-                return next;
-            });
-
+    useEffect(() => {
+        if(!isSortDate){
+            sortByAmount()
+        } else {
+            sortByDate()
+        }
     }, []);
-
-    const resetAllOverrides = useCallback(() => setOverrideAmount({}), []);
-    const hasOverrides = Object.keys(overrideAmount).length > 0;
-
 
     return (
         <div className="p-6 space-y-6 text-black w-svw">
 
             {/* Controls */}
             <div className="flex flex-wrap gap-4 items-center">
-                <div className="flex gap-2">
-                    <input className={"text-black border-black placeholder:text-muted-foreground ring-1 rounded-md pl-1"} defaultValue={14} type={"number"} onChange={(e) => setTimeRange(parseFloat(e.target.value))} />
-                </div>
-
-                {hasOverrides && (
-                    <button onClick={resetAllOverrides} className="text-red-500 text-sm">
-                        Reset all adjustments
-                    </button>
-                )}
+                <DaysFilter onChangeAction={setTimeRange} />
             </div>
 
             {/* Summary */}
@@ -62,7 +49,6 @@ export default function BillsDashboard({ bills }: Props) {
                 <SummaryCard
                     label="Date Range"
                     value={dateLongToStandard(new Date().valueOf() + timeRange * DAYS_DELTA_TO_MILLISECONDS).toString()}
-                    highlight={whatIfDelta !== 0}
                     sign
                 />
             </div>
@@ -75,33 +61,17 @@ export default function BillsDashboard({ bills }: Props) {
                     <thead>
                     <tr className="text-left border-b">
                         <th>Name</th>
-                        <th>Due Date</th>
-                        <th>Original</th>
+                        <th>Due Date<FiArrowUpRight className={"hover:cursor-pointer"} size={30} onClick={() =>setIsSortDate(!isSortDate)}/></th>
+                        <th>Original<FiArrowUpRight className={"hover:bg-muted"} size={30} onClick={() =>setIsSortDate(!isSortDate)}/></th>
                         <th>Adjusted Amount</th>
                     </tr>
                     </thead>
                     <tbody>
-                    {filtered.map((bill, index) => (
-                        <tr key={bill.id} className={bill.isOverridden ? "bg-yellow-50" : ""}>
-                            <td>{bill.name}</td>
-                            <td>{dateLongToStandard(bill.dueDate.valueOf()).toString()}
-                            </td>
-                            <td className="text-gray-400">{formatCurrency(bill.originalAmount)}</td>
-                            <td>
-                                <input
-                                    type="number"
-                                    min={0}
-                                    step={1}
-                                    defaultValue={bill.originalAmount}
-                                    onChange={(e) => handleOverride(bill.id, parseFloat(e.target.value))}
-                                    className="border rounded px-2 py-1 w-28"
+                    {(filtered).map((bill, index) => (
+                        <BillTableBody key={index} bill={bill} handleValueChangeAction={(num) =>
+                            setOverrides((prev) => ({...prev, [bill.id]:num})
+                            )}
                                 />
-                                {bill.isOverridden && (
-                                    <span className="ml-2 text-xs text-yellow-600">adjusted</span>
-                                )}
-                            </td>
-
-                        </tr>
                     ))}
                     <tr className="text-left border-t">
                         <td>Totals</td>
@@ -115,28 +85,4 @@ export default function BillsDashboard({ bills }: Props) {
 
         </div>
     );
-}
-
-// --- Sub-components ---
-
-function SummaryCard({
-                         label, value, highlight = false, sign = false,
-                     }: {
-    label: string;
-    value: number | string;
-    highlight?: boolean;
-    sign?: boolean;
-}) {
-    return (
-        <div className={`rounded-xl p-4 border ${highlight ? "border-yellow-400 bg-yellow-50" : "border-gray-200"}`}>
-            <p className="text-xs text-gray-500 uppercase tracking-wide">{label}</p>
-            <p className={`text-2xl font-bold ${highlight ? "text-red-600" : ""} ${highlight ? "text-green-600" : ""}`}>
-                {value}
-            </p>
-        </div>
-    );
-}
-
-function formatCurrency(value: number): string {
-    return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value);
 }
